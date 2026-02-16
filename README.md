@@ -27,3 +27,45 @@ This project simulates a real-world analytics engineering workflow.
 
 ## 🧱 Project Structure
 
+---
+
+## 🔍 Key Engineering Steps
+
+### 1️⃣ Data Cleaning
+- Removed missing values
+- Validated churn label integrity
+- Checked feature consistency
+
+### 2️⃣ Feature Engineering
+- Revenue Per Month
+- High Value Customer flag
+- Engagement Score (service usage count)
+
+### 3️⃣ Analytical Insights
+- Churned customers show higher revenue concentration
+- Engagement score has weak negative correlation with churn
+- Revenue positively correlates with churn likelihood
+
+---
+
+## 📈 Example Engineered Features
+
+- `Revenue Per Month = Total Revenue / Tenure`
+- `Engagement Score = Count of subscribed services`
+- Binary `High Value Customer` classification
+
+---
+
+## 🚀 Next Steps
+
+- Convert notebook into production-ready Python script
+- Add modeling (Logistic Regression / XGBoost)
+- Containerize pipeline
+- Add CI/CD workflow
+
+---
+
+## 👩🏽‍💻 Author
+
+Salome Kyalo  
+Analytics Engineer | Data Systems | Feature Engineering | BI Architecture
