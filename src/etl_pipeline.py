@@ -1,46 +1,100 @@
 """
-Telco Churn ETL Pipeline
+Telco Customer Churn — ETL Pipeline
 Author: Salome Kyalo
 
 This script:
-1. Loads raw telco data
-2. Cleans and validates fields
-3. Engineers analytical features
-4. Exports processed dataset
+1. Loads segmented telco churn datasets
+2. Merges them into a unified customer-level dataset
+3. Cleans and validates business-logic nulls
+4. Engineers analytical features
+5. Exports a processed dataset ready for modeling
 """
 
+import os
 import pandas as pd
 
 
-def load_data(path: str) -> pd.DataFrame:
-    """Load dataset from CSV."""
-    return pd.read_csv(path)
+# ------------------------------------------------------------
+# Load Data
+# ------------------------------------------------------------
 
+def load_data(base_path: str) -> dict:
+    """
+    Load all customer-level CSV files.
+    Returns dictionary of DataFrames.
+    """
+
+    datasets = {
+        "demographics": pd.read_csv(os.path.join(base_path, "Telco_customer_churn_demographics.csv")),
+        "location": pd.read_csv(os.path.join(base_path, "Telco_customer_churn_location.csv")),
+        "services": pd.read_csv(os.path.join(base_path, "Telco_customer_churn_services.csv")),
+        "status": pd.read_csv(os.path.join(base_path, "Telco_customer_churn_status.csv")),
+    }
+
+    return datasets
+
+
+# ------------------------------------------------------------
+# Merge Tables
+# ------------------------------------------------------------
+
+def merge_tables(datasets: dict) -> pd.DataFrame:
+    """
+    Merge customer-level tables using LEFT JOIN on Customer ID.
+    """
+
+    df = datasets["demographics"] \
+        .merge(datasets["location"], on="Customer ID", how="left") \
+        .merge(datasets["services"], on="Customer ID", how="left") \
+        .merge(datasets["status"], on="Customer ID", how="left")
+
+    return df
+
+
+# ------------------------------------------------------------
+# Clean & Validate
+# ------------------------------------------------------------
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Basic data cleaning and validation."""
-    df = df.dropna()
+    """
+    Validate dataset integrity and handle business-logic nulls.
+    """
 
-    # Convert churn label to numeric
+    # Ensure customer ID uniqueness
+    assert df["Customer ID"].is_unique, "Customer IDs are not unique"
+
+    # Business-logic null handling
+    df["Churn Reason"] = df["Churn Reason"].fillna("Not Churned")
+    df["Churn Category"] = df["Churn Category"].fillna("Not Churned")
+    df["Offer"] = df["Offer"].fillna("No Offer")
+    df["Internet Type"] = df["Internet Type"].fillna("No Internet")
+
+    # Encode churn label numerically
     df["Churn Value"] = df["Churn Label"].map({"Yes": 1, "No": 0})
 
     return df
 
 
-def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
-    """Create analytical features."""
+# ------------------------------------------------------------
+# Feature Engineering
+# ------------------------------------------------------------
 
-    # Revenue per month
+def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Create analytical features for churn analysis.
+    """
+
+    # Revenue efficiency
     df["Revenue Per Month"] = (
         df["Total Revenue"] / df["Tenure in Months"].replace(0, 1)
     )
 
-    # High value customer flag
+    # High-value segmentation
     df["High Value Customer"] = (
         df["Revenue Per Month"] > df["Revenue Per Month"].median()
     )
 
-    # Engagement score
+    # Engagement score (service adoption count)
     service_cols = [
         "Online Security",
         "Online Backup",
@@ -59,18 +113,39 @@ def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def save_data(df: pd.DataFrame, path: str):
-    """Export processed dataset."""
-    df.to_csv(path, index=False)
+# ------------------------------------------------------------
+# Save Output
+# ------------------------------------------------------------
 
+def save_data(df: pd.DataFrame, output_path: str):
+    """
+    Export cleaned and engineered dataset.
+    """
+    df.to_csv(output_path, index=False)
+
+
+# ------------------------------------------------------------
+# Main Pipeline Execution
+# ------------------------------------------------------------
 
 def main():
-    input_path = "data/telco_raw.csv"
-    output_path = "data/telco_processed.csv"
 
-    df = load_data(input_path)
+    base_path = "data"
+    output_path = "data/customer_churn_processed.csv"
+
+    print("Loading datasets...")
+    datasets = load_data(base_path)
+
+    print("Merging tables...")
+    df = merge_tables(datasets)
+
+    print("Cleaning and validating...")
     df = clean_data(df)
+
+    print("Engineering features...")
     df = feature_engineering(df)
+
+    print("Saving processed dataset...")
     save_data(df, output_path)
 
     print("ETL pipeline completed successfully.")
